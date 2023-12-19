@@ -1,0 +1,1066 @@
+-- IS 420 Project D4
+-- Group 8: Wendy Bickersteth, Sandhya Khandagale, Kyle Lambert, Nidhi Rami, Jacob Reiter
+
+-- Drop tables.
+DROP TABLE parking_session CASCADE CONSTRAINTS;
+DROP TABLE parking_zone CASCADE CONSTRAINTS;
+DROP TABLE vehicle CASCADE CONSTRAINTS;
+DROP TABLE customer CASCADE CONSTRAINTS;
+DROP TABLE payment CASCADE CONSTRAINTS;
+DROP TABLE message_alert CASCADE CONSTRAINTS;
+
+
+-- Create tables.
+CREATE TABLE customer (
+	cid INT, -- customer id
+	c_name VARCHAR(30),-- customer name 
+	c_address VARCHAR(30), -- customer address
+	c_zipcode INT, -- customer zipcode
+	c_state CHAR(2), -- customer state, two-letter abbreviations
+	c_email VARCHAR(30),-- customer email
+	c_phone_number VARCHAR(20), -- customer phone number
+	c_payment_card CHAR(16), --customer card number, 16 numbers
+	PRIMARY KEY (cid) -- cid primary key
+);
+
+CREATE TABLE parking_zone(
+	zid INT, -- zone id
+	z_address VARCHAR(30), --zone address
+	z_zipcode INT, -- zone zipcode
+	z_capacity INT, -- zone capacity 
+	z_available_spots INT, -- zone available spots
+	z_hourly_rate DECIMAL, -- zone hourly rate
+	z_maximal_len INTERVAL DAY TO SECOND, -- zone maximal length
+	z_start_day INT, -- zone start day
+	z_end_day INT, -- zone end day
+	z_start_time TIMESTAMP, -- zone start time timestamp
+	z_end_time TIMESTAMP, -- zone end time timestamp
+	PRIMARY KEY (zid) -- zid primary key
+);
+
+CREATE TABLE vehicle(
+	vid INT, -- vehicle id
+	v_license_plate VARCHAR(30),-- vehicle license plate
+	v_state CHAR(2), -- vehicle state
+	v_maker VARCHAR(30), -- vehicle maker
+	v_model VARCHAR(20), -- vehicle model
+	v_year INT, -- vehicle year
+	v_color VARCHAR(15), -- vehicle color
+	cid INT, -- foreign key cid
+	PRIMARY KEY (vid),-- vid primary key 
+	FOREIGN KEY (cid) REFERENCES customer -- vehicle can only have one customer
+);
+
+CREATE TABLE parking_session(
+	sid INT, -- session id
+	cid INT, -- customer id
+	vid INT, -- vehicle id
+	zid INT, -- parking zone id
+	s_start_time TIMESTAMP, -- session start time
+	s_end_time TIMESTAMP, -- session end time
+	s_charge INT, -- session charge 
+	PRIMARY KEY (sid), -- sid primary key
+	FOREIGN KEY (cid) REFERENCES customer, -- cid customer table
+	FOREIGN KEY (vid) REFERENCES vehicle, -- vid vehicle table
+	FOREIGN KEY (zid) REFERENCES parking_zone -- zid vehicle table 
+);
+
+CREATE TABLE payment(
+	pid INT, -- payment id
+	sid INT, -- session id
+	payment_time TIMESTAMP, -- time of payment
+	initial_parking_length INTERVAL DAY TO SECOND, -- initial parking length
+	initial_payment_transaction DECIMAL, -- initial payment
+	payment_extension DECIMAL, -- payments for extension 
+	PRIMARY KEY (pid), -- pid primary key
+	FOREIGN KEY (sid) REFERENCES parking_session -- sid session id
+);
+
+CREATE TABLE message_alert(
+	mid INT, -- message id
+	cid INT, -- customer id
+	m_time TIMESTAMP, -- message time
+	m_body VARCHAR(250), -- message body
+	PRIMARY KEY (mid), -- mid primary key,
+	FOREIGN KEY (cid) REFERENCES customer -- cid customer id
+);
+
+-- Insert statements.
+-- customer table.
+INSERT INTO customer VALUES (1, 'Sarah', '1000 Hilltop Circle', 21030, 'MD','sarah1@gmail.com','4435647897', '4147543598760987');
+INSERT INTO customer VALUES (2, 'John', '1234 Treetop Lane', 21004, 'VA', 'john2@gmail.com', '4439086543', '2100784534251678');
+INSERT INTO customer VALUES (3, 'Will', '5678 Oak Drive', 23201, 'DE', 'will3@gmail.com', '4436789213', '6754213456390987');
+
+-- parking zone table.
+INSERT INTO parking_zone VALUES (1, '1000 Main Street Circle', 21044, 100, 55, 2.00, INTERVAL '3' HOUR, 2, 6, TIMESTAMP '2023-10-14 07:00:00', TIMESTAMP '2023-10-14 19:00:00');
+INSERT INTO parking_zone VALUES(2, '2552 Fairpark Circle', 20002, 150, 100, 2.00, INTERVAL '3' HOUR, 2, 6, TIMESTAMP '2023-10-15 07:00:00', TIMESTAMP '2023-10-15 19:00:00');
+INSERT INTO parking_zone VALUES (3, '500 Wishing Drive', 20786, 200, 88, 2.00,INTERVAL '3' HOUR, 2, 6, TIMESTAMP '2023-10-16 07:00:00', TIMESTAMP '2023-10-16 19:00:00');
+
+-- vehicle table.
+INSERT INTO vehicle VALUES(1, 'coolcar69', 'MD', 'honda', 'civic', 2010, 'black', 1);
+INSERT INTO vehicle VALUES(2, 'coolcar68', 'MD', 'honda', 'accord', 2015, 'black', 2);
+INSERT INTO vehicle VALUES(3, 'gangst3r420', 'MD', 'ford', 'focus', 2021, 'red', 3);
+
+-- parking session table.
+INSERT INTO parking_session VALUES(1, 1, 1, 1, TIMESTAMP '2023-10-15 11:00:00', TIMESTAMP '2023-10-15 12:00:00', 2.00);
+INSERT INTO parking_session VALUES(2, 2, 2, 2, TIMESTAMP '2023-10-15 12:00:00', TIMESTAMP '2023-10-15 15:00:00', 6.00);
+INSERT INTO parking_session VALUES(3, 3, 3, 3, TIMESTAMP '2023-10-15 13:00:00', TIMESTAMP '2023-10-15 15:00:00', 4.00);
+
+-- payment table.
+INSERT INTO payment VALUES(1, 1, TIMESTAMP '2023-10-15 11:00:00', INTERVAL '1' HOUR, 2.00, 0.00);
+INSERT INTO payment VALUES(2, 2, TIMESTAMP '2023-10-15 12:00:00', INTERVAL '3' HOUR, 6.00, 0.00);
+INSERT INTO payment VALUES(3, 3, TIMESTAMP '2023-10-15 13:00:00', INTERVAL '2' HOUR, 4.00, 0.00);
+
+-- message_alert table.
+INSERT INTO message_alert VALUES(1, 1, TIMESTAMP '2023-10-15 11:00:00', 'Session X will expire in Y minutes, please extend it if necessary.');
+INSERT INTO message_alert VALUES(2, 2, TIMESTAMP '2023-10-15 12:00:00', 'Message generated for session X.');
+INSERT INTO message_alert VALUES(3, 3, TIMESTAMP '2023-10-15 13:00:00', 'session X ends at Y, where X is session ID and Y is time');
+
+--Sets server output on for all procedures
+set serveroutput on;
+
+--Feature 1:
+drop sequence sequence_1;
+CREATE SEQUENCE sequence_1
+start with 4
+increment by 1;
+
+CREATE or REPLACE PROCEDURE create_new_customer(
+p_customer_name IN VARCHAR,
+p_address IN VARCHAR,
+p_zipcode IN INT,
+p_state IN CHAR,
+p_email IN VARCHAR,
+p_phone_number IN VARCHAR,
+p_payment_card in CHAR
+)
+as 
+v_customer_id Integer;
+BEGIN
+--checks if customer with same phone number exists 
+SELECT cid INTO v_customer_id FROM customer WHERE c_phone_number = p_phone_number;
+
+
+UPDATE customer 
+SET c_name = p_customer_name,
+c_address = p_address,
+c_zipcode= p_zipcode,
+c_state = p_state,
+c_email = p_email,
+c_payment_card= p_payment_card
+WHERE c_phone_number = p_phone_number;
+dbms_output.put_line('Customer already exists, updated information');
+
+
+EXCEPTION
+WHEN NO_DATA_FOUND THEN
+    dbms_output.put_line('No such customer exists with the phone number given');
+    v_customer_id :=sequence_1.nextval;
+    INSERT into customer values(v_customer_id, p_customer_name,p_address, p_zipcode, p_state, p_email, p_phone_number, p_payment_card);
+    dbms_output.put_line('New customer created with ID: ' || v_customer_id);
+    dbms_output.put_line('New customer created with name: ' || p_customer_name);
+    dbms_output.put_line('New customer created with address: ' || p_address);
+    dbms_output.put_line('New customer created with zipcode: ' || p_zipcode);
+    dbms_output.put_line('New customer created with state: ' || p_state);
+    dbms_output.put_line('New customer created with email: ' || p_email);
+    dbms_output.put_line('New customer created with phone number: ' || p_phone_number);
+    dbms_output.put_line('New customer created with payment card: ' || p_payment_card);
+
+END;
+/
+
+--Feature 1 test cases
+
+--regular test case -- adds new customer and prints out customer info
+set serveroutput on;
+select *from customer;
+exec create_new_customer('Sneha', '660 Boas St', 21136, 'PA', 'shenry1@umbc.edu', '4436904588','4147543598761123');
+select *from customer;
+
+--regular test case -- adds new customer & prints out customer info
+set serveroutput on;
+exec create_new_customer('Nithya', '10231 Ebb Tide Ln', 20321, 'MD', 'nkadari1@umbc.edu', '4431239567','4147345698761123');
+select *from customer;
+
+--special - should print customer already exists & updates address + zip code
+set serveroutput on;
+exec create_new_customer('Sarah', '9450 Fairfax Blvd', 21134, 'MD', 'sarah1@gmail.com', '4435647897','4147543598760989');
+select *from customer;
+
+--special - duplicate email - should print customer already exists & update info
+set serveroutput on;
+exec create_new_customer('Nidhi', '9686 Lindenbrook St', 22031, 'VA', 'sarah1@gmail.edu', '4435647897','4147543500900987');
+select *from customer;
+
+
+-- Feature 2:
+DROP SEQUENCE vehicle_seq;
+
+CREATE SEQUENCE vehicle_seq START WITH 4 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE PROCEDURE add_vehicle(
+    p_license_plate VARCHAR2,
+    p_state CHAR,
+    p_customer_id INT,
+    p_maker VARCHAR2,
+    p_model VARCHAR2,
+    p_year INT,
+    p_color VARCHAR2
+) AS
+    v_vehicle_id INT;
+    v_vehicle_count_same_plate INT;
+    v_vehicle_count_diff_state INT;
+BEGIN
+    -- Check if a vehicle with the same plate number and state exists
+    SELECT COUNT(*)
+    INTO v_vehicle_count_same_plate
+    FROM vehicle
+    WHERE v_license_plate = p_license_plate AND v_state = p_state;
+
+    -- Check if a vehicle with the same plate number but different state exists
+    SELECT COUNT(*)
+    INTO v_vehicle_count_diff_state
+    FROM vehicle
+    WHERE v_license_plate = p_license_plate AND v_state <> p_state;
+
+    -- If a vehicle with the same plate and state exists, print a message and stop
+    IF v_vehicle_count_same_plate > 0 THEN
+        DBMS_OUTPUT.PUT_LINE('Vehicle already exists');
+        RETURN;
+    END IF;
+
+    -- If a vehicle with the same plate but different state exists, proceed with the insertion
+    IF (v_vehicle_count_diff_state > 0) or (v_vehicle_count_same_plate = 0) THEN
+        -- Insert a new row into the vehicle table using the sequence for the vehicle ID
+        INSERT INTO vehicle (
+            vid, v_license_plate, v_state, cid, v_maker, v_model, v_year, v_color
+        ) VALUES (
+            vehicle_seq.NEXTVAL, p_license_plate, p_state, p_customer_id, p_maker, p_model, p_year, p_color
+        );
+
+        -- Get the newly generated vehicle ID
+        SELECT vehicle_seq.CURRVAL INTO v_vehicle_id FROM DUAL;
+
+        DBMS_OUTPUT.PUT_LINE('New vehicle added with ID: ' || v_vehicle_id);
+    ELSE
+        -- If there is no matching vehicle, print a message indicating that the vehicle cannot be used
+        DBMS_OUTPUT.PUT_LINE('Vehicle cannot be used');
+    END IF;
+END add_vehicle;
+/
+
+--Feature 2 test cases
+
+select * from vehicle;
+-- Regular Case (will add)
+EXEC add_vehicle('testcar5', 'MD', 1, 'toyota', 'camry', 2022, 'blue');
+
+-- Special Case - Same plate same state (use the same input again, won’t add)
+EXEC add_vehicle('testcar5', 'MD', 1, 'toyota', 'camry', 2022, 'blue');
+
+-- Special Case - Same plate different state (will add)
+EXEC add_vehicle('testcar5', 'VA', 1, 'toyota', 'camry', 2022, 'blue');
+EXEC add_vehicle('testcar5', 'CA', 1, 'toyota', 'camry', 2022, 'blue');
+
+select * from vehicle;
+
+-- Feature 3:
+/* Feature 3: Search for a parking zone.
+Input: Zipcode, current time, intended length of parking
+Output: 
+For all zones that are 1) located at the given zipcode and  2) with at least one available spot, but not 3) the session start time is in effective period of the zone and the requested parking length does not exceeds the zone's maximal parking length:
+Print out zone ID, address, number of available spots, hourly rate, maximal parking length, and effective period (including start day of the week, end day of the week, start time and end time).
+If there is no matching zone, print out no available zones.
+ */
+
+CREATE or REPLACE 
+PROCEDURE search_parking_zone(zip_code IN INT, curr_time IN TIMESTAMP, max_len IN INTERVAL DAY TO SECOND) IS
+CURSOR search IS 
+-- Print out zone ID, address, number of available spots, hourly rate, maximal parking length, and effective period (including start day of the week, end day of the week, start time and end time).
+SELECT zid, z_address, z_capacity, z_hourly_rate, z_maximal_len, z_start_day, z_end_day, z_start_time, z_end_time
+	FROM parking_zone
+	WHERE z_zipcode = zip_code AND z_available_spots > 0;
+v_count int;
+BEGIN
+	SELECT count(*) into v_count
+	FROM parking_zone
+	WHERE z_zipcode = zip_code AND z_available_spots > 0;
+	
+	IF v_count = 0 THEN 
+	dbms_output.put_line('No available zones');
+	ELSE 
+	-- the session start time is in effective period of the zone and the requested parking length exceeds the zone's maximal parking length
+	    SELECT count(*) INTO v_count
+        FROM parking_zone PZ, parking_session PS
+        WHERE (to_char(curr_time, 'D') BETWEEN z_start_day AND z_end_day) 
+        AND (curr_time BETWEEN z_start_time AND z_end_time) AND max_len >= z_maximal_len
+        AND z_zipcode = zip_code;
+
+        IF v_count > 0 THEN 
+        dbms_output.put_line('You are in the effective period and the parking length exceeds maximal length.');
+		
+        ELSE
+			FOR item IN search
+        	LOOP
+			dbms_output.put_line('An available parking zone is: ' || chr(10) || 'zid: ' || item.zid || chr(10)|| 'address: ' 
+            || item.z_address || chr(10) || 'capacity: ' || item.z_capacity || chr(10) || 'hourly rate: ' || item.z_hourly_rate 
+            || chr(10) || 'maximum parking length ' || item.z_maximal_len || chr(10) || 'start day: ' || item.z_start_day || chr(10) 
+            || 'end day: ' || item.z_end_day || chr(10) || 'start time: ' ||item.z_start_time || chr(10) || 'end time: ' || 
+            item.z_end_time || chr(10));
+		
+
+    END LOOP;
+	END IF;
+END IF;
+END;
+/
+
+-- Feature 3 test cases
+
+select * from parking_zone;
+-- Regular case: zipcode exists, within the effective period, and does not exceed maximal length
+exec search_parking_zone(20786, TIMESTAMP '2023-10-16 08:00:00', INTERVAL '2' HOUR );
+-- Special case: no matching zipcode
+exec search_parking_zone(21250, SYSTIMESTAMP,INTERVAL '2' HOUR);
+-- Special case: within the effective period and exceeds maximal length
+exec search_parking_zone(20786, TIMESTAMP '2023-10-16 08:00:00', INTERVAL '5' HOUR);
+
+
+/* Feature 4: list all parking sessions in a period for a customer. Input is customer ID, a start date and an end date. */
+
+-- Create procedure
+CREATE OR REPLACE PROCEDURE list_parking_sessions(
+    p_customer_id INT,
+    p_start_date TIMESTAMP,
+    p_end_date TIMESTAMP
+)
+AS
+    v_customer_count INT;
+    v_total_charge DECIMAL := 0;
+
+BEGIN
+    -- This feature first checks whether the customer ID is valid (whether there is a customer with that ID).
+    SELECT COUNT(*) INTO v_customer_count
+    FROM customer
+    WHERE cid = p_customer_id;
+  -- If not, it prints out an error message 'No such customer').
+    IF v_customer_count = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('No such customer');
+        RETURN;
+    END IF;
+
+	-- Check if there are sessions within the specified period for the customer
+    SELECT COUNT(*)
+    INTO v_customer_count
+    FROM parking_session ps
+    WHERE ps.cid = p_customer_id
+      AND ps.s_start_time BETWEEN p_start_date AND p_end_date;
+
+    IF v_customer_count = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('No sessions for the specified period');
+        RETURN;
+    END IF;
+
+    -- Fetch and print parking sessions within the specified period for the customer
+    FOR session_rec IN (
+        SELECT 
+            ps.sid,
+            ps.s_start_time,
+            ps.s_end_time,
+            ps.zid,
+            ps.vid,
+            ps.s_charge
+        FROM parking_session ps
+        WHERE ps.cid = p_customer_id
+          AND ps.s_start_time BETWEEN p_start_date AND p_end_date
+    ) 
+    LOOP
+        DBMS_OUTPUT.PUT_LINE('Session ID: ' || session_rec.sid);
+        DBMS_OUTPUT.PUT_LINE('Start Time: ' || TO_CHAR(session_rec.s_start_time, 'YYYY-MM-DD HH24:MI:SS'));
+        DBMS_OUTPUT.PUT_LINE('End Time: ' || TO_CHAR(session_rec.s_end_time, 'YYYY-MM-DD HH24:MI:SS'));
+        DBMS_OUTPUT.PUT_LINE('Zone ID: ' || session_rec.zid);
+        DBMS_OUTPUT.PUT_LINE('Vehicle ID: ' || session_rec.vid);
+        DBMS_OUTPUT.PUT_LINE('Total Charge: $' || session_rec.s_charge);
+        DBMS_OUTPUT.PUT_LINE('-------------------------');
+
+        -- Print the total charge
+        v_total_charge := v_total_charge + session_rec.s_charge;
+    END LOOP;
+
+    -- Print the total charge for all parking sessions
+    DBMS_OUTPUT.PUT_LINE('Total Charge for all sessions: $' || v_total_charge);
+END list_parking_sessions;
+/
+
+-- Feature 4 test cases
+-- Inputs: p_customer_id INT,  p_start_date TIMESTAMP, p_end_date TIMESTAMP
+
+-- select statement to display parking session table
+select * from parking_session;
+
+-- Regular case
+exec list_parking_sessions(1, TIMESTAMP '2023-10-15 00:00:00', TIMESTAMP '2023-10-16 00:00:00');
+-- Expected Result: Print details of parking sessions for customer ID 1 within the specified period, and display the total charge for all sessions.
+
+-- Special case: An invalid customer ID
+exec list_parking_sessions(999, TIMESTAMP '2023-10-15 00:00:00', TIMESTAMP '2023-10-16 00:00:00');
+-- Expected Result: Display 'No such customer' message as the specified customer ID (999) does not exist.
+
+-- Special case: No Sessions
+exec  list_parking_sessions(2, TIMESTAMP '2023-10-12 00:00:00', TIMESTAMP '2023-10-14 00:00:00');
+-- Expected Result: Display 'No sessions for the specified period' message as there are no parking sessions for customer ID 2 within the specified period.
+
+-- select statement to confirm results from parking session table
+select * from parking_session;
+/
+
+
+
+-- Feature 5:
+-- Procedure to list vehicles parked in a specific parking zone at a given time
+create or replace procedure list_vehicles(zid_in parking_zone.zid%type, current_time_in timestamp)
+as
+    v_count number;
+    v_vid vehicle.vid%type;
+    v_cid vehicle.cid%type;
+    v_license_plate vehicle.v_license_plate%type;
+    v_state vehicle.v_state%type;
+    v_maker vehicle.v_maker%type;
+    v_model vehicle.v_model%type;
+    v_color vehicle.v_color%type;
+    vehicle_counter number := 0;
+    cursor c1 is -- Cursor to fetch vehicle details
+        select vid, cid, v_license_plate, v_state, v_maker, v_model, v_color
+        from vehicle
+        where vid in (select vid from parking_session where zid = zid_in and current_time_in between s_start_time and s_end_time);
+Begin
+    -- Check if the parking zone exists
+    select count(*)
+    into v_count
+    from parking_zone
+    where zid = zid_in;
+
+    if v_count = 0 then -- If no parking zone found with the given ID
+        dbms_output.put_line('Incorrect zone ID');
+        return;
+    end if;
+
+    open c1;
+    loop
+        fetch c1 into v_vid, v_cid, v_license_plate, v_state, v_maker, v_model, v_color;
+        exit when c1%notfound;
+        vehicle_counter := vehicle_counter + 1;
+        dbms_output.put_line('Vehicle ID = ' || v_vid || ', Customer ID = ' || v_cid || ', License Plate = ' || v_license_plate || ', State = ' || v_state || ', Maker = ' || v_maker || ', Model = ' || v_model || ', Color = ' || v_color);
+    end loop;
+    close c1;
+    if vehicle_counter = 0 then -- If no vehicles found in the specified zone at the given time
+        dbms_output.put_line('No vehicles found in the specified zone at the given time.');
+    end if;
+end;
+/
+
+--  for list_vehicles
+select * from vehicle;
+select * from parking_session;
+
+
+-- Feature 5 test cases
+
+/* Test Case 1: Valid Zone ID and Current Time
+Zone ID: 1
+Current Time: '2023-10-15 11:00:00' */
+exec list_vehicles(1, TIMESTAMP '2023-10-15 11:00:00');
+
+-- Expected Output: Vehicle ID = 1, Customer ID = 1, License Plate = coolcar69, State = MD, Maker = honda, Model = civic, Color = black
+
+/* Test Case 2: Invalid Zone ID
+Zone ID: 999
+Current Time: '2023-10-15 11:00:00' */
+exec list_vehicles(999, TIMESTAMP '2023-10-15 11:00:00');
+-- Expected output: Incorrect zone ID
+
+/* Test Case 3: No Vehicles in the Zone
+Zone ID: 2
+Current Time: '2023-10-15 11:00:00' */
+exec list_vehicles(2, TIMESTAMP '2023-10-15 11:00:00');
+-- Expected output: No vehicles found in the specified zone at the given time.
+/
+
+--Feature 6:
+
+-- sequence for parking session table
+DROP SEQUENCE sess_id_seq;
+CREATE SEQUENCE sess_id_seq START WITH 4;
+--sequence for payment table
+DROP SEQUENCE pay_id_seq;
+CREATE SEQUENCE pay_id_seq START WITH 4;
+--sequence for message table
+DROP SEQUENCE mess_id_seq;
+CREATE SEQUENCE mess_id_seq START WITH 4;
+
+
+-- procedure
+CREATE or REPLACE PROCEDURE start_session(c_id IN INT, v_id IN INT, z_id IN INT, session_s_time IN TIMESTAMP, park_hours IN INTERVAL DAY TO SECOND) 
+IS
+s_count INT;
+s_total_charge DECIMAL;
+zone_hourly_rate DECIMAL;
+mess_body message_alert.m_body%type;
+
+
+BEGIN
+-- check if c_id is valid 
+    SELECT count(*) into s_count
+    FROM customer C
+    WHERE C.cid = c_id;
+	
+
+-- print out if now matching rows
+    IF s_count = 0 THEN
+	dbms_output.put_line('Error: not a valid customer id');
+	
+-- check if v_id is valid 
+	ELSE
+    SELECT count(*) into s_count
+    FROM vehicle V
+    WHERE V.vid = v_id;
+
+
+-- print out if now matching rows
+    IF s_count = 0 THEN
+	dbms_output.put_line('Error: not a valid vehicle id');
+
+-- check if z_id is valid 
+	ELSE	
+    SELECT count(*) into s_count
+    FROM parking_zone PZ
+    WHERE PZ.zid = z_id;
+
+
+-- print out if now matching rows
+    IF s_count = 0 THEN
+	dbms_output.put_line('Error: not a valid zone id');
+
+    ELSE 
+--  The session start time is in effective period of the zone and the requested parking length exceeds the zone's maximal parking length. If yes: print a message saying that  the parking length exceeds maximal length and stop.
+        SELECT count(*) INTO s_count
+        FROM parking_zone PZ, parking_session PS
+        WHERE (to_char(session_s_time, 'D') BETWEEN z_start_day AND z_end_day) 
+        AND (session_s_time BETWEEN z_start_time AND z_end_time) AND park_hours >= z_maximal_len
+		AND PS.zid = z_id
+		AND PS.zid = PZ.zid;
+
+        IF s_count > 0 THEN 
+        dbms_output.put_line('You are in the effective period and the parking length exceeds maximal length.');
+
+
+-- check available spots 
+    ELSE
+        SELECT count(*) into s_count
+        FROM parking_zone PZ, parking_session PS
+        WHERE PS.zid = z_id
+		AND PS.zid = PZ.zid AND z_available_spots > 0;
+
+    IF s_count = 0 THEN 
+        dbms_output.put_line('No available spots');
+
+
+    ELSE
+-- if condition a) is satisfied and condition b) is not satisfied, check whether the start time is within effective period. If so, compute a total charge as a fee of $1.00 plus hourly rate * number of hours of intended parking length. 
+-- Otherwise (start time not in effective period so parking is free), print a message 'parking is free now!' and stop the procedure.
+    SELECT count(*) into s_count
+    FROM parking_zone PZ
+    WHERE  PZ.zid = z_id
+	AND (to_char(session_s_time, 'D') NOT BETWEEN z_start_day AND z_end_day) 
+    AND (session_s_time NOT BETWEEN z_start_time AND z_end_time);
+
+-- If not within effective period
+    IF s_count > 0 THEN 
+    dbms_output.put_line('Parking is free!');
+
+    ELSE 
+-- Compute a total charge as a fee of $1.00 plus hourly rate * number of hours of intended parking length.
+    SELECT count(*) into s_count
+    FROM parking_zone PZ, parking_session PS
+    WHERE (PS.zid = PZ.zid AND PZ.zid = z_id AND z_available_spots > 0)
+    AND ((to_char(session_s_time, 'D') BETWEEN z_start_day AND z_end_day) 
+    AND (session_s_time BETWEEN z_start_time AND z_end_time));
+    
+    IF s_count > 0 THEN
+    
+    SELECT z_hourly_rate into zone_hourly_rate
+    FROM parking_zone
+    WHERE zid = z_id;
+
+    s_total_charge := 1 + (zone_hourly_rate * EXTRACT(HOUR FROM park_hours));
+
+
+-- if total charge is greater than zero, insert a row into parking_session table with a newly created session ID, input customer ID, vehicle ID, zone ID, start time, end time as start time + number of hours computed in step 3, total as what is computed in step 3. 
+
+
+
+    IF s_total_charge > 0 THEN
+
+    INSERT INTO parking_session VALUES (sess_id_seq.nextval, c_id, v_id, z_id, session_s_time, session_s_time + park_hours, s_total_charge);
+
+    -- if total charge is greater than zero, insert a row into payment table as payment for the initial session, with a newly generated payment ID, session ID as the session ID created in step 4, time as session start time, amount as total charge computed in step 3, and the input number of hours to park. 
+    INSERT INTO payment VALUES (pay_id_seq.nextval, sess_id_seq.currval, session_s_time, park_hours, s_total_charge, NULL);
+
+	-- Insert a message into the message table with the customer id as input customer id and time as session start time and body as 'a new parking session with ID X created' where X is the new session ID.
+
+    mess_body := 'a new parking session with ID '|| sess_id_seq.currval || ' created';
+    INSERT INTO message_alert VALUES (mess_id_seq.nextval, c_id, session_s_time, mess_body);
+	
+	-- Please also reduce available spots for the parking zone by one. 
+	UPDATE parking_zone
+	SET z_available_spots = z_available_spots - 1
+	WHERE zid = z_id;
+    
+    dbms_output.put_line('Session started.');
+
+END IF;
+END IF;
+END IF;
+END IF;
+END IF;
+END IF;
+END IF;
+END IF; 
+END;
+/
+
+--Feature 6 test cases
+
+select * from parking_zone;
+select * from parking_session;
+select * from message_alert;
+
+-- Regular case --> has available spots, is within effective period
+exec start_session(3, 3, 3, TIMESTAMP '2023-10-16 12:00:00', INTERVAL '1' HOUR);
+-- available spots at zid decreases by 1
+
+select * from parking_zone;
+-- shows added session
+select * from parking_session;
+-- shows added message
+select * from message_alert;
+
+-- Special case: in the effective period and above maximal parking length 
+-- In that zone, the effective period is between 7am-7pm on a Monday (10/16) with a maximal length of three hours
+select * from parking_zone;
+exec start_session(1, 2, 3, TIMESTAMP '2023-10-16 08:00:00', INTERVAL '4' HOUR);
+
+-- Special case: parking
+-- In that zone, the effective period is between 7am-7pm. This case starts at 8pm, so it is out of the effective period
+select * from parking_zone;
+exec start_session(2, 3, 2, TIMESTAMP '2023-10-15 20:00:00', INTERVAL '1' HOUR);
+
+-- Special case: invalid zone id. ZID 10 does not exist
+select * from parking_zone;
+exec start_session(2, 3, 10, TIMESTAMP '2023-10-15 20:00:00', INTERVAL '1' HOUR);
+/
+
+--Feature 7, run the select statements separate from the test cases
+CREATE OR REPLACE PROCEDURE extend_session(
+    p_session_id INT,
+    p_current_time TIMESTAMP,
+    p_hours_to_extend INT
+) AS
+    v_max_length INTERVAL DAY TO SECOND;
+    v_current_length INTERVAL DAY TO SECOND;
+    v_session_count INT;
+    v_hourly_rate DECIMAL;
+    v_payment_id INT;
+    v_customer_id INT;
+    v_message_id INT;
+BEGIN
+    -- Check if the parking session with the input ID exists
+    SELECT COUNT(*)
+    INTO v_session_count
+    FROM parking_session
+    WHERE sid = p_session_id;
+
+    -- If no rows are found, print 'Invalid session ID' and return
+    IF v_session_count = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('Invalid session ID');
+        RETURN;
+    END IF;
+    -- Get the customer ID for the parking session
+    SELECT cid
+    INTO v_customer_id
+    FROM parking_session
+    WHERE sid = p_session_id;
+
+    -- Check if the provided current timestamp is equal to the real current time
+    IF p_current_time != SYSTIMESTAMP THEN
+        DBMS_OUTPUT.PUT_LINE('Invalid current timestamp');
+        RETURN;
+    END IF;
+
+    -- Calculate the maximal length for the parking zone
+    SELECT z_maximal_len
+    INTO v_max_length
+    FROM parking_zone pz
+    JOIN parking_session ps ON pz.zid = ps.zid
+    WHERE sid = p_session_id;
+
+    -- Calculate the current length of the parking session
+    SELECT s_end_time - s_start_time
+    INTO v_current_length
+    FROM parking_session
+    WHERE sid = p_session_id;
+
+    -- Check if extending the session will exceed the maximal length
+    IF (v_current_length + (p_hours_to_extend * INTERVAL '1' HOUR)) > v_max_length THEN
+        DBMS_OUTPUT.PUT_LINE('Cannot extend the session because maximal length reached');
+    ELSE
+        -- Perform the extension by updating the end time of the parking session
+        UPDATE parking_session
+        SET s_end_time = s_end_time + (p_hours_to_extend * INTERVAL '1' HOUR)
+        WHERE sid = p_session_id;
+        DBMS_OUTPUT.PUT_LINE('Parking session extended. New end time: ' || TO_CHAR(systimestamp + (p_hours_to_extend * INTERVAL '1' HOUR), 'YYYY-MM-DD HH24:MI:SS'));
+        
+        SELECT MAX(pid) + 1 INTO v_payment_id FROM payment;
+        INSERT INTO payment (pid, sid, payment_time, initial_parking_length, initial_payment_transaction, payment_extension)
+        VALUES (v_payment_id, p_session_id, SYSTIMESTAMP, v_current_length, v_hourly_rate * p_hours_to_extend, p_hours_to_extend);
+        
+        SELECT MAX(mid) + 1 INTO v_message_id FROM message_alert;
+        INSERT INTO message_alert (mid, cid, m_time, m_body)
+        VALUES (v_message_id, v_customer_id, SYSTIMESTAMP, 'Parking Session ' || p_session_id || ' extended to ' || TO_CHAR(systimestamp + (p_hours_to_extend * INTERVAL '1' HOUR), 'YYYY-MM-DD HH24:MI:SS'));
+    END IF;
+END extend_session;
+/
+
+
+--Feature 7 test cases 
+
+select * from parking_session;
+select * from payment;
+select * from message_alert;
+
+-- Regular Case
+BEGIN
+    extend_session(1, SYSTIMESTAMP, 2);
+END;
+/
+select * from parking_session;
+
+--Special Case (Invalid Session ID)
+BEGIN
+    extend_session(999, SYSTIMESTAMP, 2);
+END;
+/
+
+--Special Case (Extension exceeds maximum allowed)
+BEGIN
+    extend_session(1, SYSTIMESTAMP, 10);
+END;
+/
+
+--Special Case (Not current timestamp)
+BEGIN
+    extend_session(1, TO_TIMESTAMP('2023-12-01 15:30:00', 'YYYY-MM-DD HH24:MI:SS'), 2);
+END;
+/
+
+select * from parking_session;
+select * from payment;
+select * from message_alert;
+
+--Feature 8:
+
+CREATE OR REPLACE PROCEDURE stop_parking_session(
+    p_session_id IN INT,
+    p_current_time IN TIMESTAMP
+)
+AS
+    p_cid INT;
+    p_end_time TIMESTAMP;
+    p_sid INT; -- Initialize p_sid
+    m_time TIMESTAMP;
+    p_function VARCHAR(250);
+    p_function_two VARCHAR(250);
+    primary_key INT;
+BEGIN
+    SELECT cid, s_end_time
+    INTO p_cid, p_end_time
+    FROM parking_session
+    WHERE sid = p_session_id; -- Use the correct column name
+
+    p_sid := p_session_id; -- Initialize p_sid
+
+    -- If current time after end time 
+    IF p_current_time > p_end_time THEN
+        dbms_output.put_line('Valid session ID');
+        p_function := ('Session' || p_sid || ' expired. You may get a ticket');
+
+        -- Use the correct column name for message_alert (cid instead of 1)
+        SELECT NVL(MAX(mid), 0) INTO primary_key FROM message_alert;
+        primary_key := primary_key + 1;
+
+        INSERT INTO message_alert VALUES(primary_key, p_cid, p_current_time, p_function);
+
+        -- If the current time is not later than the end time
+        UPDATE parking_session
+        SET s_end_time = p_current_time
+        WHERE sid = p_sid;
+
+        p_function_two := ('Session' || p_sid || ' ends at ' || p_current_time);
+        primary_key := primary_key + 1;
+
+        INSERT INTO message_alert VALUES(primary_key, p_cid, p_current_time, p_function_two);
+    ELSE
+        dbms_output.put_line('Invalid Session ID. Current time is after end time.');
+    END IF;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN dbms_output.put_line('Invalid session ID');
+END;
+/
+
+--Feature 8 test cases: 
+--regular test with valid sessionID 
+select * from parking_session;
+exec stop_parking_session(1, TIMESTAMP '2023-10-20 11:00:00');
+
+--special test with invalid sessionID
+exec stop_parking_session(999, TIMESTAMP '2023-10-15 11:00:00');
+
+--invalid sessionID
+exec stop_parking_session(111, TIMESTAMP '2023-10-15 11:00:00');
+
+--special test where current time is after end time 
+select * from parking_session;
+exec stop_parking_session(2, TIMESTAMP '2021-10-15 10:00:00');
+
+
+-- Feature 9: create a reminder for all sessions about to expire in 15 minutes.
+
+-- Drop and create sequence
+DROP SEQUENCE message_alert_seq;
+CREATE SEQUENCE message_alert_seq START WITH 4 INCREMENT BY 1;
+
+-- Create procedure
+CREATE OR REPLACE PROCEDURE generateSessionReminders(current_time TIMESTAMP)
+IS
+    v_session_id INT;
+    v_customer_id INT;
+    v_end_time TIMESTAMP;
+    v_minutes_until_expiry INT;
+    v_message_id INT;
+
+BEGIN
+    -- Cursor to fetch sessions about to expire
+    FOR session_rec IN (
+        SELECT sid, cid, s_end_time
+        FROM parking_session
+        WHERE s_end_time BETWEEN current_time AND current_time + INTERVAL '15' MINUTE
+    )
+    LOOP
+        -- Extract necessary information
+        v_session_id := session_rec.sid;
+        v_customer_id := session_rec.cid;
+        v_end_time := session_rec.s_end_time;
+
+        -- Calculate minutes until expiry
+        v_minutes_until_expiry := EXTRACT(HOUR FROM (v_end_time - current_time)) * 60 +
+                                 EXTRACT(MINUTE FROM (v_end_time - current_time));
+
+        -- Insert message into the message_alert table and handle duplicates
+        LOOP
+            BEGIN
+                INSERT INTO message_alert(mid, cid, m_time, m_body)
+                VALUES(message_alert_seq.NEXTVAL,
+                       v_customer_id,
+                       current_time,
+                       'Session ' || v_session_id || ' will expire in ' ||
+                       v_minutes_until_expiry || ' minutes, please extend it if necessary.')
+                RETURNING mid INTO v_message_id;
+
+                -- Print message
+                DBMS_OUTPUT.PUT_LINE('Message generated for session ' || v_session_id || '. Message ID: ' || v_message_id);
+
+                -- Exit the loop if the insert is successful
+                EXIT;
+            EXCEPTION
+                WHEN DUP_VAL_ON_INDEX THEN
+                    -- Handle duplicate mid value, generate a new one
+                    CONTINUE;
+                WHEN OTHERS THEN
+                    -- Handle other exceptions (e.g., print an error message)
+                    DBMS_OUTPUT.PUT_LINE('Error generating message for session ' || v_session_id || '. Error: ' || SQLERRM);
+                    EXIT;
+            END;
+        END LOOP;
+    END LOOP;
+END;
+/
+
+-- Feature 9 test cases
+
+-- View current state of message_alert and parking_session tables
+SELECT * FROM message_alert;
+SELECT * FROM parking_session;
+
+-- Regular Case: Sessions about to expire within the next 15 minutes
+-- Insert a session that is about to expire in 10 minutes from the current time
+INSERT INTO parking_session VALUES(5, 1, 1, 1, TIMESTAMP '2023-10-20 12:30:00', TIMESTAMP '2023-10-20 12:40:00', 3.00);
+
+-- Display the parking_session table before executing the procedure
+SELECT * FROM parking_session;
+
+-- Execute the procedure to generate reminders for sessions about to expire
+exec generateSessionReminders(TIMESTAMP '2023-10-20 12:25:00');
+
+-- Display the message_alert table after executing the procedure
+SELECT * FROM message_alert;
+
+/* Expected output: Message generated for session X. Message ID: Y
+Procedure give reminder that session expires in 15 minutes. */
+
+
+-- Special Case 1: No sessions about to expire
+-- Execute the procedure with a current time where no sessions are about to expire
+exec generateSessionReminders(TIMESTAMP '2023-10-20 12:00:00');
+
+-- Display the message_alert table after executing the procedure
+SELECT * FROM message_alert;
+
+-- Expected Output: The procedure does not generate any message alerts because there are no sessions about to expire within the next 15 minutes.
+
+-- Special Case 2: Current time exactly at the end time of an existing session
+-- Insert a session that is about to expire in 5 minutes from the current time
+INSERT INTO parking_session VALUES(9, 3, 3, 3, TIMESTAMP '2023-10-20 14:00:00', TIMESTAMP '2023-10-20 15:00:00', 8.00);
+
+-- Display the parking_session table before executing the procedure
+SELECT * FROM parking_session;
+
+-- Execute the procedure to generate reminders for sessions about to expire
+exec generateSessionReminders(TIMESTAMP '2023-10-20 15:00:00');
+
+-- Display the message_alert table after executing the procedure
+SELECT * FROM message_alert;
+
+/* Expected output: Message generated for session X. Message ID: Y
+Session X will expire in Y minutes, please extend it if necessary. */
+
+--Feature 10: 
+create or replace procedure print_statistics(start_date_in date, end_date_in date)
+as
+    v_total_customers number; -- Total number of customers
+    v_total_vehicles number; -- Total number of vehicles
+    v_total_zones number; -- Total number of parking zones
+    v_total_sessions number; -- Total number of parking sessions
+    v_total_revenue number; -- Total revenue generated from parking sessions
+    v_avg_charges number; -- Average charges per parking session
+    v_avg_parking_length number; -- Average parking length per session in hours
+    v_zid parking_zone.zid%type; -- Zone ID
+    v_capacity parking_zone.z_capacity%type; -- Zone capacity
+    v_total_sessions_zone number; -- Total number of sessions in a zone
+    v_total_revenue_zone number; -- Total revenue generated from sessions in a zone
+    v_occupancy_rate number; -- Occupancy rate of a zone
+    v_parking_hours number; -- Total parking hours in a zone
+    v_days number; -- Number of days in the specified period
+
+-- This cursor retrieves statistics for each parking zone, including the zone ID, capacity, number of parking sessions, total revenue, and total parking hours within the specified period
+    cursor c_zone_stats is
+        select z.zid, z.z_capacity, count(ps.sid), sum(ps.s_charge), sum(extract(hour from ps.s_end_time-ps.s_start_time) + extract(minute from (ps.s_end_time-ps.s_start_time))/60)
+        from parking_zone z
+        left join parking_session ps on z.zid = ps.zid
+        where ps.s_start_time between start_date_in and end_date_in
+        and ps.s_end_time between start_date_in and end_date_in
+        group by z.zid, z.z_capacity;
+
+-- This code block checks if the start date is later than the end date.
+-- If the start date is later, it displays an error message and exits the procedure.
+begin
+    if start_date_in > end_date_in then
+    dbms_output.put_line('Error: Start date cannot be later than end date.');
+    return;
+    end if;
+    
+    select count(*)
+    into v_total_customers
+    from customer;
+
+    select count(*)
+    into v_total_vehicles
+    from vehicle;
+
+    select count(*)
+    into v_total_zones
+    from parking_zone;
+
+-- This retrieves the total number of parking sessions, total revenue, and total parking hours within the specified period. 
+    select count(*), sum(s_charge), sum(extract(hour from s_end_time-s_start_time) + extract(minute from (s_end_time-s_start_time))/60)
+    into v_total_sessions, v_total_revenue, v_parking_hours
+    from parking_session
+    where s_start_time between start_date_in and end_date_in
+    and s_end_time between start_date_in and end_date_in;
+    
+    if v_total_sessions = 0 then
+    dbms_output.put_line('No parking sessions found in the specified period.');
+    return;
+    end if;
+    
+    v_avg_charges := v_total_revenue / v_total_sessions;
+    v_avg_parking_length := v_parking_hours / v_total_sessions;
+    
+
+
+    dbms_output.put_line('Total number of customers = ' || v_total_customers);
+    dbms_output.put_line('Total number of vehicles = ' || v_total_vehicles);
+    dbms_output.put_line('Total number of parking zones = ' || v_total_zones);
+    dbms_output.put_line('Total number of parking sessions = ' || v_total_sessions);
+    dbms_output.put_line('Total revenue = ' || v_total_revenue);
+    dbms_output.put_line('Average charges per session = ' || v_avg_charges);
+    dbms_output.put_line('Average parking length = ' || v_avg_parking_length || ' hours');
+
+    v_days := end_date_in - start_date_in;
+
+-- This code block retrieves statistics for each parking zone within the specified period, including the zone ID, total sessions, total revenue, and occupancy rate. 
+    open c_zone_stats;
+    loop
+        fetch c_zone_stats into v_zid, v_capacity, v_total_sessions_zone, v_total_revenue_zone, v_parking_hours;
+        exit when c_zone_stats%notfound;
+        v_occupancy_rate := v_parking_hours / (v_capacity * 24 * v_days);
+        dbms_output.put_line('Zone ID = ' || v_zid || ', Total Sessions = ' || v_total_sessions_zone || ', Total Revenue = ' || v_total_revenue_zone || ', Occupancy Rate = ' || ROUND(v_occupancy_rate,6));
+    end loop;
+    close c_zone_stats;
+end;
+/
+
+--Feature 10 test cases
+
+-- for print_statistics procedure:
+select * from customer;
+select * from vehicle;
+select* from parking_zone;
+select * from parking_session;
+
+/* Test Case 1: Valid Start and End Date   
+Start Date: '2023-10-15'
+End Date: '2023-10-16' */
+begin
+    print_statistics(DATE '2023-10-15', DATE '2023-10-16');
+end;
+/
+--Expected Output: Normal output of statistics according to requirements.
+
+/* Test Case 2: Invalid Start and End Date
+Start Date: '2023-10-15'
+End Date: '2023-10-14' */
+begin
+    print_statistics(DATE '2023-10-15', DATE '2023-10-14');
+end;
+/
+--Expected Output: Error: Start date cannot be later than end date.
+
+/* Test Case 3: No Parking Sessions in the Period
+Start Date: '2023-10-11'
+End Date: '2023-10-11' */
+begin
+    print_statistics(DATE '2023-10-11', DATE '2023-10-11');
+end;
+/
+--Expected Output: No parking sessions found in the specified period.
+
